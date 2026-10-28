@@ -1,0 +1,21 @@
+CrystalDiskInfo 9.9.2
+ Date : 2026/10/01 12:20:05
+--------------------------------------------
+  (01) ST2000DM005-2CW102
+--------------------------------------------
+ Model : ST2000DM005-2CW102
+ Serial Number : SYNTHETIC001
+ Disk Size : 2000.3 GB
+ Interface : Serial ATA
+ Power On Hours : 15639 hours
+ Temperature : 38 C
+ Health Status : Good
+-- S.M.A.R.T. ----------------------------------
+ID Cur Wor Thr RawValues(6) Attribute Name
+05 100 100 _10 000000000000 Reallocated
+09 _83 _83 __0 000000003D17 Power Hours
+BB 100 100 __0 000000000000 Reported uncorrectable
+BC 100 __1 __0 000100020BA0 Command timeout
+C5 100 100 __0 000000000000 Pending
+C6 100 100 __0 000000000000 Offline
+C7 200 189 __0 00000000074D CRC

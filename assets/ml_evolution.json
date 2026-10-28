@@ -1,0 +1,634 @@
+{
+  "schema_version": 1,
+  "evaluation_unit": "One daily SMART observation for one HDD (drive-day); not unique HDD failures.",
+  "selection_rule": "v4 threshold and trial selected on validation only; v4 Test is retrospective and not a novel blind evaluation.",
+  "active_site_engine": "XGBoost v4 loaded for CSV predictions by default; optional v1 engines remain available via Model Selection.",
+  "source_files": [
+    "DriveGuard ML v1 research_results.json",
+    "DriveGuard_v2_results.zip",
+    "DriveGuard_v3_results.zip",
+    "User-supplied DriveGuard_v4_Real_Trained_Model_For_Web.zip: FINAL_STATUS.json, experimental_best_validation_model.joblib, v4_model_manifest.json"
+  ],
+  "versions": [
+    {
+      "id": "v1",
+      "status": "completed",
+      "tag": "Baseline",
+      "title": "Compare the fundamentals",
+      "goal": "Find a suitable classifier for predicting HDD failure within 7 days.",
+      "data": "Backblaze daily SMART · Q2 2026 only",
+      "period": "Apr–Jun 2026",
+      "split": "Chronological Train / Validation / Test within Q2",
+      "approach": "Logistic Regression, Decision Tree, Random Forest and XGBoost versus SMART rule-based detection. Validation selected the default Random Forest model.",
+      "change": "First comparison of traditional SMART rules and four ML classifiers.",
+      "why": "Establish an initial baseline and measure the trade-off between detection and false alerts.",
+      "selected": "Random Forest",
+      "selection": "Highest validation MCC among models meeting the initial recall criteria.",
+      "metrics": {
+        "recall": 0.6521060842433697,
+        "precision": 0.0024057830881506,
+        "f1": 0.0047938803479577,
+        "mcc": 0.0377569084538726,
+        "pr_auc": 0.0144741151681872,
+        "threshold": 0.59,
+        "tp": 418,
+        "fp": 173330,
+        "fn": 223,
+        "tn": 3727758,
+        "accuracy": 0.9555189507010866,
+        "n_rows": 3901729
+      },
+      "baseline": {
+        "recall": 0.6817472698907956,
+        "precision": 0.0013104076957215,
+        "f1": 0.0026157875046763,
+        "mcc": 0.0273385868353612,
+        "pr_auc": 0.0009456513818423,
+        "threshold": 0.5,
+        "tp": 437,
+        "fp": 333047,
+        "fn": 204,
+        "tn": 3568041,
+        "accuracy": 0.9145888912325792,
+        "n_rows": 3901729
+      },
+      "validation_metrics": {
+        "recall": 0.7065637065637066,
+        "precision": 0.0032452370678189,
+        "f1": 0.0064607997740485,
+        "mcc": 0.0459487832564339,
+        "pr_auc": 0.0149330067053295,
+        "threshold": 0.59,
+        "tp": 549,
+        "fp": 168622,
+        "fn": 228,
+        "tn": 3713382,
+        "accuracy": 0.9565131280904073,
+        "n_rows": 3882781
+      },
+      "candidates": [
+        {
+          "name": "SMART Rule-based",
+          "selected": false,
+          "metrics": {
+            "recall": 0.6817472698907956,
+            "precision": 0.0013104076957215,
+            "f1": 0.0026157875046763,
+            "mcc": 0.0273385868353612,
+            "pr_auc": 0.0009456513818423,
+            "threshold": 0.5,
+            "tp": 437,
+            "fp": 333047,
+            "fn": 204,
+            "tn": 3568041,
+            "accuracy": 0.9145888912325792,
+            "n_rows": 3901729
+          }
+        },
+        {
+          "name": "Logistic Regression",
+          "selected": false,
+          "metrics": {
+            "recall": 0.7269890795631825,
+            "precision": 0.0004185584881595,
+            "f1": 0.000836635289851,
+            "mcc": 0.0125364027497283,
+            "pr_auc": 0.0052085395495129,
+            "threshold": 0.6999553561210632,
+            "tp": 466,
+            "fp": 1112879,
+            "fn": 175,
+            "tn": 2788209,
+            "accuracy": 0.7147280090441955,
+            "n_rows": 3901729
+          }
+        },
+        {
+          "name": "Decision Tree",
+          "selected": false,
+          "metrics": {
+            "recall": 0.6817472698907956,
+            "precision": 0.001849680644383,
+            "f1": 0.0036893515352599,
+            "mcc": 0.0333859836080453,
+            "pr_auc": 0.0029313660103339,
+            "threshold": 0.6699999999999999,
+            "tp": 437,
+            "fp": 235820,
+            "fn": 204,
+            "tn": 3665268,
+            "accuracy": 0.9395078438302609,
+            "n_rows": 3901729
+          }
+        },
+        {
+          "name": "Random Forest",
+          "selected": true,
+          "metrics": {
+            "recall": 0.6521060842433697,
+            "precision": 0.0024057830881506,
+            "f1": 0.0047938803479577,
+            "mcc": 0.0377569084538726,
+            "pr_auc": 0.0144741151681872,
+            "threshold": 0.59,
+            "tp": 418,
+            "fp": 173330,
+            "fn": 223,
+            "tn": 3727758,
+            "accuracy": 0.9555189507010866,
+            "n_rows": 3901729
+          }
+        },
+        {
+          "name": "XGBoost",
+          "selected": false,
+          "metrics": {
+            "recall": 0.672386895475819,
+            "precision": 0.0023533908485311,
+            "f1": 0.004690365162884,
+            "mcc": 0.0379056774683432,
+            "pr_auc": 0.0162924648015085,
+            "threshold": 0.7099999999999999,
+            "tp": 431,
+            "fp": 182709,
+            "fn": 210,
+            "tn": 3718379,
+            "accuracy": 0.9531184764497995,
+            "n_rows": 3901729
+          }
+        }
+      ],
+      "test_positive_rows": 641,
+      "limitations": [
+        "Different test period from v2/v3; do not use v1 scores for a direct improvement percentage.",
+        "Original training scope may have included SSD model strings.",
+        "Prediction scores are not calibrated failure probabilities."
+      ]
+    },
+    {
+      "id": "v2",
+      "status": "completed",
+      "tag": "Extended data",
+      "title": "Improve the first model",
+      "goal": "Increase training coverage and compare Random Forest and XGBoost variants.",
+      "data": "Backblaze daily SMART · Q1–Q2 2026, HDD-only cohort",
+      "period": "Jan–Jun 2026",
+      "split": "Train Jan–Mar; Validation Apr; Test May–Jun; 7-day boundary safeguard",
+      "approach": "Two Random Forest and two XGBoost configurations with validation-selected thresholds.",
+      "change": "Expanded the dataset to two quarters, restricted to HDDs, and searched model configurations and thresholds.",
+      "why": "Test whether additional time coverage and different model settings reduce false alerts.",
+      "selected": "XGB_depth4_weight05",
+      "selection": "Validation: MCC with recall target ≥72%.",
+      "metrics": {
+        "recall": 0.6544271438531257,
+        "precision": 0.0048618113009488,
+        "f1": 0.0096519174445725,
+        "mcc": 0.0546109732744131,
+        "pr_auc": 0.0224921384808981,
+        "threshold": 0.69,
+        "tp": 2816,
+        "fp": 576392,
+        "fn": 1487,
+        "tn": 18281381,
+        "accuracy": 0.9693629163619105,
+        "n_rows": 18862076
+      },
+      "baseline": {
+        "recall": 0.7167092726005113,
+        "precision": 0.001920340729717,
+        "f1": 0.0038304182906199,
+        "mcc": 0.0341829632927111,
+        "pr_auc": 0.0014409530401111,
+        "threshold": 0.5,
+        "tp": 3084,
+        "fp": 1602881,
+        "fn": 1219,
+        "tn": 17254892,
+        "accuracy": 0.9149563388462648,
+        "n_rows": 18862076
+      },
+      "validation_metrics": {
+        "recall": 0.7243468383188186,
+        "precision": 0.008070776448352,
+        "f1": 0.0159636832464774,
+        "mcc": 0.0744289631041836,
+        "pr_auc": 0.0408401028367967,
+        "threshold": 0.69,
+        "tp": 1913,
+        "fp": 235115,
+        "fn": 728,
+        "tn": 7659486,
+        "accuracy": 0.9701360297683672,
+        "n_rows": 7897242
+      },
+      "candidates": [
+        {
+          "name": "RF_depth12_leaf10",
+          "selected": false,
+          "metrics": {
+            "recall": 0.6541947478503369,
+            "precision": 0.0042432281696085,
+            "f1": 0.008431766342725,
+            "mcc": 0.0507605178894376,
+            "pr_auc": 0.0150052304839553,
+            "threshold": 0.6968050599098206,
+            "tp": 2815,
+            "fp": 660595,
+            "fn": 1488,
+            "tn": 18197178,
+            "accuracy": 0.9648987205862175,
+            "n_rows": 18862076
+          }
+        },
+        {
+          "name": "RF_depth18_leaf5",
+          "selected": false,
+          "metrics": {
+            "recall": 0.6741808040901697,
+            "precision": 0.0017919519675336,
+            "f1": 0.0035744032804175,
+            "mcc": 0.031728396137863,
+            "pr_auc": 0.0186924290437013,
+            "threshold": 0.57,
+            "tp": 2901,
+            "fp": 1616004,
+            "fn": 1402,
+            "tn": 17241769,
+            "accuracy": 0.9142509021806507,
+            "n_rows": 18862076
+          }
+        },
+        {
+          "name": "XGB_depth4_weight05",
+          "selected": true,
+          "metrics": {
+            "recall": 0.6544271438531257,
+            "precision": 0.0048618113009488,
+            "f1": 0.0096519174445725,
+            "mcc": 0.0546109732744131,
+            "pr_auc": 0.0224921384808981,
+            "threshold": 0.69,
+            "tp": 2816,
+            "fp": 576392,
+            "fn": 1487,
+            "tn": 18281381,
+            "accuracy": 0.9693629163619105,
+            "n_rows": 18862076
+          }
+        },
+        {
+          "name": "XGB_depth6_weight10",
+          "selected": false,
+          "metrics": {
+            "recall": 0.6572158958865908,
+            "precision": 0.002405385750556,
+            "f1": 0.004793228463099,
+            "mcc": 0.0371702914472745,
+            "pr_auc": 0.0207927767730734,
+            "threshold": 0.7596760988235474,
+            "tp": 2828,
+            "fp": 1172867,
+            "fn": 1475,
+            "tn": 17684906,
+            "accuracy": 0.9377405753216136,
+            "n_rows": 18862076
+          }
+        },
+        {
+          "name": "SMART Rule-based",
+          "selected": false,
+          "metrics": {
+            "recall": 0.7167092726005113,
+            "precision": 0.001920340729717,
+            "f1": 0.0038304182906199,
+            "mcc": 0.0341829632927111,
+            "pr_auc": 0.0014409530401111,
+            "threshold": 0.5,
+            "tp": 3084,
+            "fp": 1602881,
+            "fn": 1219,
+            "tn": 17254892,
+            "accuracy": 0.9149563388462648,
+            "n_rows": 18862076
+          }
+        }
+      ],
+      "test_positive_rows": 4303,
+      "limitations": [
+        "Validation met the 72% recall target; the final test did not.",
+        "Same frozen v2/v3 test cohort can be compared directly.",
+        "Scores are not calibrated failure probabilities."
+      ]
+    },
+    {
+      "id": "v3",
+      "status": "completed",
+      "tag": "Fine-tuned",
+      "title": "Tune for fewer false alerts",
+      "goal": "Improve detection quality under a very imbalanced failure dataset.",
+      "data": "Backblaze daily SMART · Q1–Q2 2026, same test cohort as v2",
+      "period": "Jan–Jun 2026",
+      "split": "Same Train / Validation / Test timing and test cohort as v2",
+      "approach": "15 XGBoost tuning configurations, 3 feature ablations and 3 comparison classifiers, with drive-level evaluation.",
+      "change": "Tuned class imbalance handling, tree complexity and learning settings; tested SMART raw, delta and rolling feature groups.",
+      "why": "Improve MCC/PR-AUC while reducing false alerts; evaluate alerts for distinct HDDs as well as daily observations.",
+      "selected": "XGB_tree_complexity_01",
+      "selection": "Validation: 72% minimum recall then highest MCC.",
+      "metrics": {
+        "recall": 0.6648849639786195,
+        "precision": 0.0056985334392969,
+        "f1": 0.0113002160509674,
+        "mcc": 0.059898898162223,
+        "pr_auc": 0.0279937702838725,
+        "threshold": 0.5499999999999999,
+        "tp": 2861,
+        "fp": 499198,
+        "fn": 1442,
+        "tn": 18358575,
+        "accuracy": 0.9734578526775102,
+        "n_rows": 18862076
+      },
+      "baseline": {
+        "recall": 0.7167092726005113,
+        "precision": 0.001920340729717,
+        "f1": 0.0038304182906199,
+        "mcc": 0.0341829632927111,
+        "pr_auc": 0.0014409530401111,
+        "threshold": 0.5,
+        "tp": 3084,
+        "fp": 1602881,
+        "fn": 1219,
+        "tn": 17254892,
+        "accuracy": 0.9149563388462648,
+        "n_rows": 18862076
+      },
+      "validation_metrics": {
+        "recall": 0.7213176826959485,
+        "precision": 0.009559269982888656,
+        "f1": 0.01886848517263921,
+        "mcc": 0.08117695734356706,
+        "pr_auc": 0.04348170623115402,
+        "threshold": 0.5499999999999999,
+        "tp": 1905,
+        "fp": 197378,
+        "fn": 736,
+        "tn": 7697223,
+        "accuracy": 0.9749135204416934,
+        "n_rows": 7897242
+      },
+      "candidates": [
+        {
+          "name": "XGBoost tuned v3",
+          "selected": true,
+          "metrics": {
+            "recall": 0.6648849639786195,
+            "precision": 0.0056985334392969,
+            "f1": 0.0113002160509674,
+            "mcc": 0.059898898162223,
+            "pr_auc": 0.0279937702838725,
+            "threshold": 0.5499999999999999,
+            "tp": 2861,
+            "fp": 499198,
+            "fn": 1442,
+            "tn": 18358575,
+            "accuracy": 0.9734578526775102,
+            "n_rows": 18862076
+          }
+        },
+        {
+          "name": "Logistic Regression",
+          "selected": false,
+          "metrics": {
+            "recall": 0.7146177085754125,
+            "precision": 0.0005461389750525,
+            "f1": 0.0010914438257821,
+            "mcc": 0.0137360702572668,
+            "pr_auc": 0.0108373772908425,
+            "threshold": 0.6574195181195801,
+            "tp": 3075,
+            "fp": 5627360,
+            "fn": 1228,
+            "tn": 13230413,
+            "accuracy": 0.7015923379801884,
+            "n_rows": 18862076
+          }
+        },
+        {
+          "name": "Decision Tree",
+          "selected": false,
+          "metrics": {
+            "recall": 0.685103416221241,
+            "precision": 0.0016972816433923,
+            "f1": 0.003386174346628,
+            "mcc": 0.0309809351533019,
+            "pr_auc": 0.0088922727645119,
+            "threshold": 0.7699999999999999,
+            "tp": 2948,
+            "fp": 1733947,
+            "fn": 1355,
+            "tn": 17123826,
+            "accuracy": 0.908000476723771,
+            "n_rows": 18862076
+          }
+        },
+        {
+          "name": "Random Forest",
+          "selected": false,
+          "metrics": {
+            "recall": 0.6837090402045085,
+            "precision": 0.0015890634410083,
+            "f1": 0.0031707574683085,
+            "mcc": 0.0297293617939877,
+            "pr_auc": 0.0135692766345644,
+            "threshold": 0.5299999999999999,
+            "tp": 2942,
+            "fp": 1848463,
+            "fn": 1361,
+            "tn": 17009310,
+            "accuracy": 0.9019289287138913,
+            "n_rows": 18862076
+          }
+        },
+        {
+          "name": "SMART Rule-based",
+          "selected": false,
+          "metrics": {
+            "recall": 0.7167092726005113,
+            "precision": 0.001920340729717,
+            "f1": 0.0038304182906199,
+            "mcc": 0.0341829632927111,
+            "pr_auc": 0.0014409530401111,
+            "threshold": 0.5,
+            "tp": 3084,
+            "fp": 1602881,
+            "fn": 1219,
+            "tn": 17254892,
+            "accuracy": 0.9149563388462648,
+            "n_rows": 18862076
+          }
+        }
+      ],
+      "test_positive_rows": 4303,
+      "drive_level": {
+        "failed_drives": 785,
+        "detected_drives": 562,
+        "recall": 0.7159235668789808,
+        "unique_drives_false_alert": 12867
+      },
+      "ablation": [
+        {
+          "name": "SMART raw",
+          "recall": 0.7273759939416887,
+          "mcc": 0.073100820544127,
+          "fp": 245356,
+          "pr_auc": 0.0354424575306602
+        },
+        {
+          "name": "Raw + change",
+          "recall": 0.7266187050359713,
+          "mcc": 0.0782144880652947,
+          "fp": 215133,
+          "pr_auc": 0.0424716709585699
+        },
+        {
+          "name": "Raw + change + rolling",
+          "recall": 0.7213176826959485,
+          "mcc": 0.081176957343567,
+          "fp": 197378,
+          "pr_auc": 0.043481706231154
+        }
+      ],
+      "training_runs": 21,
+      "limitations": [
+        "Test recall remains below the 72% target, despite validation meeting it.",
+        "The Q2 period was already examined in earlier experiments; results are retrospective, not a new blind test.",
+        "The website still uses v1 inference artifacts; v3 result is not deployed as the active prediction model."
+      ]
+    },
+    {
+      "id": "v4",
+      "status": "completed",
+      "tag": "Optuna / Real Train",
+      "title": "Targeted optimization against SMART",
+      "goal": "Improve failure detection while reducing false-positive drive-days relative to a simplified SMART rule.",
+      "data": "Backblaze daily SMART · Q1–Q2 2026 · HDD-only cohort",
+      "period": "Jan–Jun 2026",
+      "split": "Same Train / Validation / Test timing and test cohort as v2",
+      "approach": "XGBoost optimized with Optuna; 23rd trial selected using validation-only constraints on Recall and False Positives.",
+      "change": "New hyperparameter and weight search. Threshold frozen on validation at 0.49451056; evaluation then run on the same Q2 retrospective test cohort as v2/v3.",
+      "why": "Test Recall improves to 77.20% versus SMART 71.67%, with 22.57% fewer false-positive drive-days; the gain trades away v3's lower alert rate and higher MCC.",
+      "selected": "XGBoost v4 · Optuna trial 23",
+      "selection": "Validation-only selection; feasible Recall + False Positives constraints. Test was previously viewed in earlier project experiments.",
+      "metrics": {
+        "recall": 0.7720195212642342,
+        "precision": 0.0026695960970215763,
+        "f1": 0.005320793217830584,
+        "mcc": 0.042964709542687635,
+        "pr_auc": null,
+        "threshold": 0.49451056122779846,
+        "tp": 3322,
+        "fp": 1241061,
+        "fn": 981,
+        "tn": 17616712,
+        "accuracy": 0.9341513627662194,
+        "n_rows": 18862076
+      },
+      "baseline": {
+        "recall": 0.7167092726005113,
+        "precision": 0.001920340729717,
+        "f1": 0.0038304182906199,
+        "mcc": 0.0341829632927111,
+        "pr_auc": 0.0014409530401111,
+        "threshold": 0.5,
+        "tp": 3084,
+        "fp": 1602881,
+        "fn": 1219,
+        "tn": 17254892,
+        "accuracy": 0.9149563388462648,
+        "n_rows": 18862076
+      },
+      "validation_metrics": {
+        "recall": 0.8216584627035214,
+        "precision": 0.004265490413457721,
+        "f1": 0.008486922512833048,
+        "mcc": 0.05641621212797294,
+        "pr_auc": null,
+        "threshold": 0.49451056122779846,
+        "tp": 2170,
+        "fp": 506564,
+        "fn": 471,
+        "tn": 7388037,
+        "accuracy": 0.9357959398990179,
+        "n_rows": 7897242
+      },
+      "candidates": [
+        {
+          "name": "XGBoost v4",
+          "selected": true,
+          "metrics": {
+            "recall": 0.7720195212642342,
+            "precision": 0.0026695960970215763,
+            "f1": 0.005320793217830584,
+            "mcc": 0.042964709542687635,
+            "pr_auc": null,
+            "threshold": 0.49451056122779846,
+            "tp": 3322,
+            "fp": 1241061,
+            "fn": 981,
+            "tn": 17616712,
+            "accuracy": 0.9341513627662194,
+            "n_rows": 18862076
+          }
+        },
+        {
+          "name": "SMART Rule-based",
+          "selected": false,
+          "metrics": {
+            "recall": 0.7167092726005113,
+            "precision": 0.001920340729717,
+            "f1": 0.0038304182906199,
+            "mcc": 0.0341829632927111,
+            "pr_auc": 0.0014409530401111,
+            "threshold": 0.5,
+            "tp": 3084,
+            "fp": 1602881,
+            "fn": 1219,
+            "tn": 17254892,
+            "accuracy": 0.9149563388462648,
+            "n_rows": 18862076
+          }
+        }
+      ],
+      "test_positive_rows": 4303,
+      "limitations": [
+        "Q2 test results are retrospective: the same test period was examined in v2/v3. A new unseen prospective holdout is still required.",
+        "v4 Test PR-AUC was not provided by the training report; do not infer it from a single threshold or invent a value.",
+        "v4 improves Recall against SMART but has more false alerts and lower MCC/Precision than v3.",
+        "Model outputs are uncalibrated scores, not reliable probabilities of failure.",
+        "Inference needs preferably 8+ chronological readings per HDD and a supported model name."
+      ],
+      "validation_baseline": {
+        "recall": 0.811056418023476,
+        "precision": 0.00321326830790371,
+        "f1": 0.0064011762385469155,
+        "mcc": 0.047807165034334714,
+        "pr_auc": null,
+        "threshold": 0.5,
+        "tp": 2142,
+        "fp": 664469,
+        "fn": 499,
+        "tn": 7230132,
+        "accuracy": 0.9157974391566068,
+        "n_rows": 7897242
+      },
+      "drive_level": {
+        "failed_drives": 785,
+        "detected_drives": 630,
+        "recall": 0.802547770700637,
+        "unique_drives_false_alert": 25200
+      },
+      "training_runs": null,
+      "model_manifest": "models/v4_model_manifest.json"
+    }
+  ]
+}

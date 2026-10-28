@@ -1,0 +1,27 @@
+node_modules/
+dist/
+.vercel/
+.venv/
+__pycache__/
+.pytest_cache/
+*.pyc
+.env*
+.DS_Store
+data/raw/
+data/work*/
+outputs/
+*.csv.gz
+*.parquet
+*.zip
+
+# Local private SMART exports, credentials, logs
+CrystalDiskInfo_*.txt
+CrystalDiskInfo_*.csv
+*.pem
+*.key
+*.p12
+*.pfx
+*.log
+*.sqlite
+*.sqlite3
+.vscode/settings.json

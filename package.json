@@ -1,0 +1,24 @@
+{
+  "name": "driveguard-react-uiux-pro-max",
+  "private": true,
+  "version": "1.6.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test:utils": "node --test tests/frontend-utils.test.js"
+  },
+  "dependencies": {
+    "lucide-react": "^0.468.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.7.0",
+    "vite": "^6.3.0"
+  },
+  "engines": {
+    "node": ">=20.19.0"
+  }
+}
