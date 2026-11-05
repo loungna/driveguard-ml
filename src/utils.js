@@ -4,6 +4,16 @@ export const nfmt = (n) => n == null || !Number.isFinite(Number(n)) ? '—' : ne
 export const signed = (n, digits = 2) => `${n > 0 ? '+' : ''}${n.toFixed(digits)}`;
 export const safeSerial = (s) => typeof s === 'string' && s.length > 5 ? `••••${s.slice(-4)}` : '••••';
 
+export function comparisonVersions(dataset) {
+  if (!dataset?.versions) return [];
+  const versions = ['v2','v3','v4'].map(id => {
+    const version = dataset.versions.find(v => v.id === id);
+    return version ? {id, label:`XGBoost ${id}`, ...version.metrics} : null;
+  }).filter(Boolean);
+  const baseline = dataset.versions.find(v => v.id === 'v4')?.baseline;
+  return baseline ? [...versions, {id:'smart', label:'SMART Rule', ...baseline}] : versions;
+}
+
 // RFC 4180 subset: quoted values, escaped double-quotes, embedded newlines,
 // CRLF/BOM; rejects malformed input instead of guessing column boundaries.
 export function parseCsv(raw) {

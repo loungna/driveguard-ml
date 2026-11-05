@@ -19,7 +19,7 @@ import pandas as pd
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
-from core.config import SMART, PREDICTORS
+from core.config import SMART, PREDICTORS, TREND
 from core.labels import engineer_features
 from core.crystaldiskinfo import parse_report
 
@@ -161,7 +161,6 @@ def score_records(rows: list[dict], requested: str = ACTIVE_ENGINE) -> dict:
         raise HTTPException(503, "Model feature list does not match live feature engineering")
     records_to_score = []
     outcomes = []
-    important = {'smart_5_raw', 'smart_187_raw', 'smart_197_raw', 'smart_198_raw'}
     # Avoid training-distribution extrapolation from unknown HDDs or a single SMART snapshot.
     for ix, rec in latest.iterrows():
         model = str(rec['model'])
@@ -173,16 +172,44 @@ def score_records(rows: list[dict], requested: str = ACTIVE_ENGINE) -> dict:
             (recent_dates[j]-recent_dates[j-1]).days==1 for j in range(1,8)
         )
         warnings = []
+        reasons = []
         if model not in trained_models:
             warnings.append('This exact HDD model was absent from training; model inference withheld')
+            reasons.append({'code': 'unknown_model', 'message_th': 'รุ่น HDD นี้ไม่อยู่ในชุดฝึกของโมเดลที่เลือก'})
         if not daily:
             warnings.append('At least 8 consecutive daily SMART readings are required for the 7-observation trend features')
-        if len(smart_present) < 8 or not important.issubset(set(smart_present)):
+            reasons.append({'code': 'history_incomplete', 'message_th': f'มีประวัติ {len(unique_days)} วัน ต้องมีอย่างน้อย 8 วันล่าสุดที่ต่อเนื่องกัน'})
+        # Validate each drive's recent observations, not values supplied by other
+        # drives or by old snapshots elsewhere in the uploaded file.
+        recent = observations.sort_values('date').tail(8)
+        valid = recent[SMART].apply(lambda col: col.map(lambda v: pd.notna(v) and math.isfinite(float(v)) and v >= 0))
+        complete = [col for col in SMART if valid[col].all()]
+        missing_critical = [col for col in TREND if col not in complete]
+        latest_valid = [col for col in SMART if bool(valid.iloc[-1][col])]
+        quality = {
+            'complete_smart_columns': len(complete),
+            'latest_valid_smart_columns': len(latest_valid),
+            'missing_critical_attributes': missing_critical,
+            'incomplete_smart_attributes': [col for col in SMART if col not in complete],
+            'required_smart_columns': 8,
+            'required_history_days': 8,
+            'recent_days_consecutive': daily,
+        }
+        if len(complete) < 8 or missing_critical:
             warnings.append('SMART attributes are incomplete for reliable model inference')
+            reasons.append({'code': 'smart_incomplete', 'message_th': f'มี SMART ที่ใช้ได้ครบช่วงล่าสุด {len(complete)} ตัว ต้องมีอย่างน้อย 8 ตัว และต้องมี 5, 187, 197, 198 ครบทุกวัน'})
+        if (recent[SMART] < 0).any().any():
+            warnings.append('Negative SMART raw readings are invalid')
+            reasons.append({'code': 'negative_smart', 'message_th': 'พบค่า SMART raw ติดลบในช่วงล่าสุด กรุณาตรวจข้อมูลต้นฉบับ'})
         can_score = not warnings
         if can_score:
             records_to_score.append(ix)
-        outcomes.append((ix,model,serial,len(unique_days),warnings,can_score))
+        history = [{'date': row['date'].strftime('%Y-%m-%d'), **{
+            col: float(row[col]) if pd.notna(row[col]) and math.isfinite(float(row[col])) else None
+            for col in TREND
+        }} for _, row in observations.sort_values('date').tail(30).iterrows()]
+        supplied = sum(observations[col].map(lambda v: pd.notna(v) and math.isfinite(float(v))).any() for col in SMART)
+        outcomes.append((ix,model,serial,len(unique_days),warnings,can_score,quality,reasons,history,int(supplied)))
     score_map={}
     if records_to_score:
         try:
@@ -191,7 +218,7 @@ def score_records(rows: list[dict], requested: str = ACTIVE_ENGINE) -> dict:
             raise HTTPException(503, 'Model could not evaluate these SMART readings')
         score_map=dict(zip(records_to_score, values))
     result=[]
-    for ix,model,serial,n,warnings,can_score in outcomes:
+    for ix,model,serial,n,warnings,can_score,quality,reasons,history,supplied in outcomes:
         rec=latest.loc[ix]
         score=float(score_map[ix]) if can_score else None
         result.append({
@@ -202,7 +229,9 @@ def score_records(rows: list[dict], requested: str = ACTIVE_ENGINE) -> dict:
             'threshold':threshold if score is not None else None,
             'assessment':'experimental_ml' if can_score else 'insufficient_evidence',
             'history_rows':n, 'known_model':model in trained_models,
-            'smart_columns_supplied':len(smart_present), 'warnings':warnings,
+            'smart_columns_supplied':supplied, 'warnings':warnings,
+            'quality':quality, 'reasons':reasons, 'smart_history':history,
+            'prediction_window_end':(rec['date'] + pd.Timedelta(days=7)).strftime('%Y-%m-%d'),
             'smart_5_raw':None if pd.isna(rec['smart_5_raw']) else float(rec['smart_5_raw']),
             'smart_197_raw':None if pd.isna(rec['smart_197_raw']) else float(rec['smart_197_raw']),
         })
@@ -267,7 +296,7 @@ async def crystaldiskinfo(request: Request):
         info={k:v for k,v in disk.items() if k!='record'}
         inferred=scored.get(key)
         if inferred:
-            info['ml']={k:inferred[k] for k in ('assessment','known_model','history_rows','score','alert','threshold','warnings')}
+            info['ml']={k:inferred[k] for k in ('assessment','known_model','history_rows','score','alert','threshold','warnings','reasons','quality')}
         else:
             info['ml']={'assessment':'unsupported' if disk['kind']!='ATA HDD' else 'insufficient_evidence',
                         'score':None,'alert':None,'known_model':False,

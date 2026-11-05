@@ -7,7 +7,10 @@ import {
   RefreshCw, SearchCheck, Shield, ShieldAlert, ShieldCheck, SlidersHorizontal, Sun,
   Terminal, TrendingDown, TrendingUp, UploadCloud, X, XCircle, Zap
 } from 'lucide-react';
-import {downloadText, nfmt, parseCsv, pct, postJson, recordsToCsv, safeSerial, signed} from './utils.js';
+import {comparisonVersions, downloadText, nfmt, parseCsv, pct, postJson, recordsToCsv, safeSerial, signed} from './utils.js';
+
+import {PredictionCard} from './PredictionDetails.jsx';
+import {ResearchDetails} from './ResearchDetails.jsx';
 
 const LINKS = [
   { id:'overview', icon:LayoutDashboard, title:'ภาพรวม', subtitle:'Overview' },
@@ -21,12 +24,6 @@ const METRICS = [
   { id:'precision', label:'Precision', unit:'%', better:'higher', detail:'สัดส่วนการแจ้งเตือนที่เป็นเหตุการณ์เสียจริง' },
   { id:'mcc', label:'MCC', unit:'', better:'higher', detail:'ค่าประเมินสมดุลภายใต้ข้อมูลไม่สมดุล' },
   { id:'fp', label:'False Positives', unit:'records', better:'lower', detail:'จำนวนการแจ้งเตือนผิดระดับ HDD-day' }
-];
-const VERSIONS = [
-  { id:'v2', label:'v2', recall:.6544271438531257, precision:.0048618113009488, mcc:.0546109732744131, fp:576392 },
-  { id:'v3', label:'v3', recall:.6648849639786195, precision:.0056985334392969, mcc:.059898898162223, fp:499198 },
-  { id:'v4', label:'v4', recall:.7720195212642342, precision:.0026695960970215763, mcc:.042964709542687635, fp:1241061 },
-  { id:'smart', label:'SMART Rule', recall:.7167092726005113, precision:.0019203407297170238, mcc:.03418296329271119, fp:1602881 }
 ];
 const ROCKET = 'DriveGuard ML v1.6 · React Edition';
 
@@ -56,10 +53,11 @@ function StatusPill({type='neutral',children}){return <span className={`status-p
 function PageIntro({eyebrow,title,desc,actions}){return <div className="page-intro"><div><span className="eyebrow">{eyebrow}</span><h1>{title}</h1><p>{desc}</p></div>{actions&&<div>{actions}</div>}</div>}
 function StatCard({label,value,detail,icon:Icon,tone='teal',badge}){return <article className={`stat-card tone-${tone}`}><div className="stat-top"><span>{label}</span><span className="stat-icon"><Icon size={20}/></span></div><div className="stat-value">{value}</div><div className="stat-bottom"><span>{detail}</span>{badge&&<span className="stat-chip">{badge}</span>}</div></article>}
 function DataDisclaimer({compact=false}){return <div className={`context-note ${compact?'compact':''}`} role="note"><Info size={17}/><p>ผลการทดลอง v4 มาจากการประเมินย้อนหลังบนข้อมูล Q2 2026 ที่เคยถูกตรวจสอบในรอบก่อนหน้า และค่าคะแนนโมเดล <strong>ยังไม่ใช่ความน่าจะเป็นที่ Calibrate แล้ว</strong> โปรดใช้เพื่อคัดกรองและสาธิต ไม่ใช่คำสั่งเปลี่ยน HDD อัตโนมัติ</p></div>}
-function MetricVisualization({showTitle=true}){
+function MetricVisualization({showTitle=true,versions=[]}){
   const [metric,setMetric]=useState('recall');
   const meta=METRICS.find(m=>m.id===metric);
-  const data=VERSIONS.filter(x=>x.id!=='smart').concat(VERSIONS.find(x=>x.id==='smart'));
+  const data=versions;
+  if (!data.length) return <p className="score-explanation">กำลังโหลดผลทดลอง…</p>;
   const max=Math.max(...data.map(d=>d[metric]));
   const fmt=(n)=>metric==='recall'?pct(n):metric==='precision'?pct(n,4):metric==='mcc'?n.toFixed(5):nfmt(n);
   return <div className="viz-panel">
@@ -76,7 +74,9 @@ function MetricVisualization({showTitle=true}){
     <div className="compare-foot"><Info size={15}/><span>{metric==='fp'?'False Positives ยิ่งน้อยยิ่งดี':'ค่าที่สูงกว่าไม่ได้แปลว่าดีกว่าทุกด้าน'} · เปรียบเทียบ v2–v4 และ SMART บน Test cohort เดียวกัน</span></div>
   </div>;
 }
-function Overview({go,health}){
+function Overview({go,health,dataset}){
+  const versions=comparisonVersions(dataset), v4=versions.find(v=>v.id==='v4'), baseline=versions.find(v=>v.id==='smart');
+  const drive=dataset?.versions.find(v=>v.id==='v4')?.drive_level;
   return <>
     <section className="hero">
       <div className="hero-content"><div className="hero-kicker"><span className="signal-dot"/> INTELLIGENT DISK HEALTH · RESEARCH PROTOTYPE</div>
@@ -90,13 +90,13 @@ function Overview({go,health}){
     <div className="page-inner">
       <div className="section-bar"><div><span className="eyebrow">MODEL PERFORMANCE · V4 RETROSPECTIVE TEST</span><h2>ผลลัพธ์ที่วัดได้จริง</h2></div><StatusPill type={health?.model_ready?'good':'neutral'}>{health?.model_ready?'API MODEL READY':'RESEARCH METRICS'}</StatusPill></div>
       <div className="stats-grid">
-        <StatCard label="Recall · XGBoost v4" value="77.20%" detail="เทียบ SMART Rule 71.67%" icon={TrendingUp} badge="+5.53 pp"/>
-        <StatCard label="False Positives" value="1.24M" detail="เทียบ SMART Rule 1.60M" icon={TrendingDown} tone="blue" badge="−22.57%"/>
-        <StatCard label="Drive-level Recall" value="80.25%" detail="ตรวจพบ HDD 630 / 785 ลูก" icon={HardDrive} tone="violet"/>
-        <StatCard label="ML Inference Engine" value="XGBoost v4" detail="Optuna Trial 23 · Threshold 0.4945" icon={Zap} tone="slate"/>
+        <StatCard label="Recall · XGBoost v4" value={pct(v4?.recall)} detail={`เทียบ SMART Rule ${pct(baseline?.recall)}`} icon={TrendingUp} badge={v4&&baseline?`${signed((v4.recall-baseline.recall)*100)} pp`:null}/>
+        <StatCard label="False Positives" value={nfmt(v4?.fp)} detail={`HDD-days · SMART Rule ${nfmt(baseline?.fp)}`} icon={TrendingDown} tone="blue"/>
+        <StatCard label="Drive-level Recall" value={pct(drive?.recall)} detail={`ตรวจพบ HDD ${nfmt(drive?.detected_drives)} / ${nfmt(drive?.failed_drives)} ลูกในกลุ่ม failure window`} icon={HardDrive} tone="violet"/>
+        <StatCard label="ML Inference Engine" value="XGBoost v4" detail={`เกณฑ์แจ้งเตือน ${v4?.threshold?.toFixed(4)??'—'} · คะแนนยังไม่ใช่ความน่าจะเป็น`} icon={Zap} tone="slate"/>
       </div>
       <div className="section-grid">
-        <div className="panel"><div className="panel-header"><div><h3>โมเดลทำนายดีกว่า SMART อย่างไร?</h3><p>เลือก Metric เพื่อดูข้อแลกเปลี่ยนระหว่าง Recall กับ False Alarms</p></div><BarChart3 size={20}/></div><MetricVisualization showTitle={false}/></div>
+        <div className="panel"><div className="panel-header"><div><h3>ผลเปรียบเทียบกับ SMART Rule</h3><p>เลือก Metric เพื่อดูข้อแลกเปลี่ยนระหว่าง Recall กับ False Alarms</p></div><BarChart3 size={20}/></div><MetricVisualization showTitle={false} versions={versions}/></div>
         <div className="panel action-panel"><div className="panel-header"><div><h3>เริ่มต้นใช้งาน</h3><p>นำไฟล์จากเครื่องของคุณมาวิเคราะห์ได้ทันที</p></div><Layers3 size={21}/></div>
           <button className="action-choice" onClick={()=>go('inspect')}><span className="action-icon teal"><FileText size={24}/></span><span><strong>CrystalDiskInfo TXT</strong><small>ตรวจสุขภาพ HDD / SSD พร้อมคำอธิบาย SMART</small></span><ChevronRight size={19}/></button>
           <button className="action-choice" onClick={()=>go('predict')}><span className="action-icon blue"><FileSpreadsheet size={23}/></span><span><strong>SMART CSV Prediction</strong><small>ทำนายด้วยข้อมูลย้อนหลังที่ครบเกณฑ์</small></span><ChevronRight size={19}/></button>
@@ -128,7 +128,7 @@ function InspectionCard({device}){
     <div className="device-section"><div className="subheading"><ClipboardCheck size={17}/> SMART Findings</div>
     <div className="issue-stack">{issues.map((issue,i)=><div className={`issue issue-${issue.severity}`} key={`${issue.code}-${i}`}><span>{issue.severity==='warning'?<AlertTriangle size={17}/>:<Info size={17}/>}</span><p>{issue.message}</p></div>)}</div></div>
     <div className="ml-conclusion"><div><span className="subheading"><Activity size={17}/> ML · Failure within 7 days</span><p>{ml.assessment==='experimental_ml'?'มีข้อมูลครบตามเกณฑ์สำหรับการประเมินแบบทดลอง':isHdd?'ข้อมูลยังไม่เพียงพอ หรือรุ่น HDD ไม่อยู่ในชุดฝึก — ระบบงดคาดการณ์':'NVMe/SSD ไม่ใช่ขอบเขตการฝึกโมเดล HDD'}</p>
-      {!!ml.warnings?.length&&<div className="minor-warnings">{ml.warnings.map((s,i)=><small key={i}>{s}</small>)}</div>}</div><div className="conclusion-score">{typeof ml.score==='number'?<><strong>{ml.score.toFixed(4)}</strong><small>{ml.alert?'คะแนนเกิน Threshold':'คะแนนต่ำกว่า Threshold'}</small></>:<><strong>—</strong><small>ไม่ออกคะแนน</small></>}</div></div>
+      {!!ml.warnings?.length&&<div className="minor-warnings">{(ml.reasons?.length?ml.reasons.map(r=>r.message_th):ml.warnings).map((s,i)=><small key={i}>{s}</small>)}</div>}</div><div className="conclusion-score">{typeof ml.score==='number'?<><strong>{ml.score.toFixed(4)}</strong><small>{ml.alert?'คะแนนถึงเกณฑ์แจ้งเตือน':'คะแนนต่ำกว่าเกณฑ์'} · {ml.threshold?.toFixed(4)}</small></>:<><strong>—</strong><small>ไม่ออกคะแนน</small></>}</div></div>
     </article>;
 }
 function Inspect({health}){
@@ -153,39 +153,55 @@ function Inspect({health}){
   </div>
 }
 function Predict({health}){
-  const [files,setFiles]=useState([]), [engine,setEngine]=useState('XGBoost v4'),[error,setError]=useState(''),[loading,setLoading]=useState(false),[response,setResponse]=useState(null),[count,setCount]=useState(null);
-  const onRun=async()=>{setError('');setResponse(null);setCount(null);if(!files[0])return setError('เลือก CSV ก่อน');if(files[0].size>1600000)return setError('ขนาด CSV ไม่ควรเกิน 1.6 MB ต่อครั้ง');
-    setLoading(true);try{const rows=parseCsv(await files[0].text());setCount(rows.length);setResponse(await postJson('/api/predict',{model:engine,records:rows}));}catch(e){setError(e.message)}finally{setLoading(false)}
+  const [files,setFiles]=useState([]), [engine,setEngine]=useState('XGBoost v4'), [error,setError]=useState(''), [loading,setLoading]=useState(false), [response,setResponse]=useState(null), [upload,setUpload]=useState(null);
+  const request=useRef({id:0,controller:null});
+  useEffect(()=>()=>{request.current.id++;request.current.controller?.abort()},[]);
+  const reset=()=>{request.current.id++;request.current.controller?.abort();setLoading(false);setResponse(null);setUpload(null);setError('')};
+  const changeFiles=value=>{reset();setFiles(value)};
+  const onRun=async()=>{
+    reset();if(!files[0])return setError('เลือก CSV ก่อน');
+    if(files[0].size>1600000)return setError('ขนาด CSV ไม่ควรเกิน 1.6 MB ต่อครั้ง');
+    const id=++request.current.id,controller=new AbortController();request.current.controller=controller;
+    const file=files[0],selectedEngine=engine;setLoading(true);
+    try{const rows=parseCsv(await file.text());if(id!==request.current.id)return;
+      const result=await postJson('/api/predict',{model:selectedEngine,records:rows},controller.signal);
+      if(id!==request.current.id)return;setResponse(result);setUpload({name:file.name,rows:rows.length});
+    }catch(e){if(id===request.current.id&&e.name!=='AbortError')setError(e.message)}finally{if(id===request.current.id)setLoading(false)}
   };
-  return <div className="page-inner content-page"><PageIntro eyebrow="02 / ML PREDICTION" title="ทำนายจาก SMART CSV" desc="นำเข้าประวัติ SMART รายวัน โดยโมเดลจะแสดงคะแนนเมื่อเป็น HDD รุ่นที่รู้จักและมีข้อมูลต่อเนื่องเพียงพอ" actions={<StatusPill type={health?.model_ready?'good':'warning'}>{health?.model_ready?'XGBOOST V4 READY':'CHECK API STATUS'}</StatusPill>}/>
-    <div className="two-column"><div><div className="panel upload-panel"><div className="panel-header"><div><h3>ข้อมูลสำหรับโมเดล</h3><p>ต้องมี date, serial_number, model และค่า smart_*_raw</p></div><Database size={21}/></div>
-      <FileDrop files={files} onFiles={setFiles} maxFiles={1} accept=".csv,text/csv" title="อัปโหลด SMART CSV" subtitle="สูงสุด 3,000 แถว · แนะนำอย่างน้อย 8 วันต่อ HDD"/>
+  const scored=response?.results.filter(r=>r.assessment==='experimental_ml')||[];
+  return <div className="page-inner content-page"><PageIntro eyebrow="02 / ML PREDICTION" title="ประเมินความเสี่ยง HDD เสียภายใน 7 วัน" desc="ใช้ประวัติ SMART รายวันและรุ่น HDD ที่อยู่ในชุดฝึก เพื่อประเมิน 7 วันถัดจากวันที่ข้อมูลล่าสุด" actions={<StatusPill type={health?.model_ready?'good':'warning'}>{health?.model_ready?'ระบบพร้อมประเมิน':'ตรวจสอบการเชื่อมต่อ API'}</StatusPill>}/>
+    <div className="two-column predict-layout"><div><div className="panel upload-panel"><div className="panel-header"><div><h3>ข้อมูลสำหรับโมเดล</h3><p>ต้องมี date, serial_number, model และค่า smart_*_raw</p></div><Database size={21}/></div>
+      <FileDrop files={files} onFiles={changeFiles} maxFiles={1} accept=".csv,text/csv" title="อัปโหลด SMART CSV" subtitle="สูงสุด 3,000 แถว · 100 HDD · 1.6 MB ต่อครั้ง"/>
       <label className="field-label" htmlFor="model-select">โมเดลที่ใช้วิเคราะห์</label>
-      <div className="select-shell"><select id="model-select" value={engine} onChange={e=>setEngine(e.target.value)}>{(health?.available_models||['XGBoost v4','Random Forest','XGBoost','Decision Tree','Logistic Regression']).map(v=><option key={v} value={v}>{v}</option>)}</select><ChevronDown size={17}/></div>
-      <div className="field-caption"><Info size={15}/> v4 เป็นผลทดลองบนข้อมูลย้อนหลัง · คะแนนไม่ใช่เปอร์เซ็นต์ความน่าจะเป็น</div>
+      <div className="select-shell"><select id="model-select" value={engine} onChange={e=>{reset();setEngine(e.target.value)}}>{(health?.available_models||['XGBoost v4','Random Forest','XGBoost','Decision Tree','Logistic Regression']).map(v=><option key={v} value={v}>{v}{v==='XGBoost v4'?' · โมเดลหลัก':' · รุ่นทดลอง v1'}</option>)}</select><ChevronDown size={17}/></div>
+      <div className="field-caption"><Info size={15}/> {engine==='XGBoost v4'?'v4 ประเมินย้อนหลังบนชุด Test เดียวกับ v2/v3':'โมเดลตัวเลือกนี้เป็น artifact ของ v1 ไม่ใช่โมเดล v2/v3 ในหน้าผลวิจัย'}</div>
       <button className="btn btn-primary full" disabled={loading||!files.length} onClick={onRun}>{loading?<RefreshCw className="spin" size={18}/>:<Gauge size={18}/>} {loading?'กำลังประเมิน…':'เริ่มประเมินข้อมูล'} <ArrowRight size={17}/></button><ErrorBox message={error}/></div>
-      <div className="help-card"><div className="help-icon"><FileClock size={20}/></div><div><strong>ข้อมูลประวัติจำเป็นอย่างไร?</strong><p>XGBoost v4 ใช้ Delta และ Rolling SMART 7 Observations ระบบต้องมี 8 วันที่เรียงต่อกัน พร้อม SMART ที่จำเป็น และรุ่น HDD ที่อยู่ในชุดฝึก</p></div></div>
-      <div className="sample-link"><FileSpreadsheet size={16}/><span>ไฟล์ตัวอย่างข้อมูลสังเคราะห์สำหรับทดลอง</span><a href="/data/sample_for_testing.csv" download>ดาวน์โหลด <Download size={14}/></a></div>
-    </div><div className="result-side"><div className="panel result-panel"><div className="panel-header"><div><h3>ผลการประเมิน</h3><p>จัดกลุ่มล่าสุดของแต่ละ HDD จากข้อมูลที่ส่งเข้าโมเดล</p></div>{response&&<StatusPill type="good">{response.results.length} DEVICES</StatusPill>}</div>
-    {response?<><div className="result-overview"><span><strong>{response.results.length}</strong> HDDs</span><span><strong>{nfmt(response.total_rows_used)}</strong> Records</span><span><strong>{response.results.filter(r=>r.assessment==='experimental_ml').length}</strong> Scored</span></div>
-      <div className="prediction-stack">{response.results.map((r,i)=><div className="prediction-card" key={i}><div className="prediction-head"><div><strong>{r.model}</strong><p>{safeSerial(r.serial_number)} · {r.date}</p></div><StatusPill type={r.assessment==='experimental_ml'?(r.alert?'warning':'good'):'neutral'}>{r.assessment==='experimental_ml'?(r.alert?'พบสัญญาณเตือน':'ไม่เกินเกณฑ์'):'งดคาดการณ์'}</StatusPill></div><div className="prediction-value">{r.score==null?'—':r.score.toFixed(4)}<small>{r.score==null?'คะแนนไม่มีหลักฐานเพียงพอ':'Uncalibrated model score'}</small></div>{!!r.warnings?.length&&<div className="prediction-warnings">{r.warnings.map((w,j)=><p key={j}><AlertCircle size={14}/>{w}</p>)}</div>}</div>)}</div><DataDisclaimer compact/></>:<PendingHint text="เมื่อประมวลผลสำเร็จ จะแสดงผลราย HDD พร้อมเหตุผลเมื่อโมเดลต้องงดประเมิน"/>}
+      <div className="help-card"><div className="help-icon"><FileClock size={20}/></div><div><strong>ตรวจความพร้อมแยกแต่ละ HDD</strong><p>ต้องมีอย่างน้อย 8 วันล่าสุดต่อเนื่องกัน และ SMART ที่ใช้ได้ครบช่วงอย่างน้อย 8 ตัว โดยต้องมี 5, 187, 197, 198 ครบ ไม่มีค่าติดลบ และเป็นรุ่นที่อยู่ในชุดฝึก</p></div></div>
+      <div className="panel sample-files"><h3>ไฟล์ทดลอง 3 กรณี</h3><p>ข้อมูลสังเคราะห์สำหรับทดสอบระบบ ไม่ใช้วัดความแม่นยำ</p>{[['01_Normal.csv','ปกติจำลอง · 10 วัน'],['02_Rising_Errors.csv','error เพิ่มต่อเนื่อง · 10 วัน'],['03_Mixed_Scenarios.csv','รวม 4 HDD · ประวัติสั้นและรุ่นไม่รองรับ']].map(([file,label])=><a key={file} href={`/data/${file}`} download><FileSpreadsheet size={17}/><span>{label}</span><Download size={16}/></a>)}</div>
+    </div><div className="result-side"><div className="panel result-panel" aria-live="polite" aria-busy={loading}><div className="panel-header"><div><h3>ผลการประเมิน</h3><p>{response?`ผลจาก ${response.engine} · ${upload?.name}`:'เลือกไฟล์และโมเดล แล้วกดเริ่มประเมินข้อมูล'}</p></div></div>
+    {response?<><div className="result-overview"><span><strong>{response.results.length}</strong> HDD ทั้งหมด</span><span><strong>{scored.filter(r=>r.alert).length}</strong> พบสัญญาณเสี่ยง</span><span><strong>{scored.filter(r=>!r.alert).length}</strong> ไม่พบตามเกณฑ์</span><span><strong>{response.results.length-scored.length}</strong> ประเมินไม่ได้</span></div>
+      <p className="score-explanation">นำเข้า {nfmt(upload.rows)} แถว · ใช้ {nfmt(response.total_rows_used)} แถวหลังจัดการข้อมูลซ้ำ · เกณฑ์ของ {response.engine}: {response.threshold.toFixed(4)}</p>
+      <div className="prediction-stack">{response.results.map((r,i)=><PredictionCard key={`${r.model}-${r.serial_number}`} result={r} engine={response.engine} index={i}/>)}</div>
+      <div className="context-note"><Info size={17}/><p>ผลจาก {response.engine} เป็นคะแนนคัดกรองที่ยังไม่ใช่เปอร์เซ็นต์โอกาสเสีย {response.research_version==='v4'?'โมเดล v4 ผ่านการประเมินย้อนหลัง ซึ่งไม่ใช่การทดสอบข้อมูลใหม่ที่ไม่เคยเห็นมาก่อน':''}</p></div>
+      </>:<PendingHint text={loading?'กำลังตรวจข้อมูลและประเมินความเสี่ยง…':'ผลจะแสดงคะแนน เกณฑ์แจ้งเตือน และเหตุผลเมื่อประเมินไม่ได้ หากเปลี่ยนไฟล์หรือโมเดลต้องประเมินใหม่'}/>}
     </div></div></div>
   </div>
 }
-function Evolution(){
-  const [dataset,setDataset]=useState(null);
-  useEffect(()=>{fetch('/data/ml_evolution.json').then(r=>r.ok?r.json():Promise.reject(new Error('data'))).then(setDataset).catch(()=>setDataset(null))},[]);
-  return <div className="page-inner content-page"><PageIntro eyebrow="03 / RESEARCH & EXPERIMENTS" title="ML Evolution · v1 → v4" desc="ดูเส้นทางการพัฒนาโมเดล Machine Learning จากผลทดลองจริง และข้อแลกเปลี่ยนระหว่างการตรวจพบกับการแจ้งเตือนผิด"/>
-    <div className="evolution-banner"><div><span className="eyebrow">V4 EXPERIMENT OUTCOME</span><h2>ชนะ SMART Rule ในสองเป้าหมายหลัก</h2><p>Recall สูงขึ้น 5.53 จุดเปอร์เซ็นต์ และ False Positives ลดลง 22.57% บนชุด Test เดียวกัน</p></div><div className="evolution-mark"><CheckCircle2 size={22}/> Validation criteria met</div></div>
-    <div className="stats-grid three"><StatCard label="SMART Rule Recall" value="71.67%" detail="Baseline แบบไม่ใช้ ML" icon={ShieldAlert} tone="slate"/><StatCard label="XGBoost v4 Recall" value="77.20%" detail="+5.53 percentage points" icon={TrendingUp}/><StatCard label="False Positives ลดลง" value="361,820" detail="HDD-day rows · Test Q2 2026" icon={TrendingDown} tone="blue"/></div>
-    <div className="section-grid"><div className="panel"><div className="panel-header"><div><h3>เปรียบเทียบ v2–v4 กับ SMART</h3><p>เลือก Metric ได้ ระบบไม่เทียบ v1 โดยตรงเพราะใช้ Test cohort ต่างกัน</p></div><BarChart3 size={20}/></div><MetricVisualization showTitle={false}/></div><div className="panel experiment-panel"><div className="panel-header"><div><h3>กระบวนการปรับปรุงโมเดล</h3><p>จาก ML Baseline สู่การค้นหา Hyperparameters</p></div><SlidersHorizontal size={20}/></div><div className="timeline">
-      {[['v1','Baseline','เปรียบเทียบ LR, DT, RF และ XGBoost บน Q2'],['v2','Class Imbalance','ปรับ Weight และ Threshold เพื่อเพิ่มประสิทธิภาพ'],['v3','Fine-tuning','คัดตัวเลือกเพื่อลดการแจ้งเตือนผิด'],['v4','Goal-driven Optimization','Optuna Trial 23 · Recall สูงกว่า SMART และ FP ต่ำกว่า SMART']].map(([v,h,s])=><div className="timeline-row" key={v}><span className={`version-token ${v}`}>{v}</span><div><strong>{h}</strong><p>{s}</p></div></div>)}
-    </div></div></div><div className="panel table-panel"><div className="panel-header"><div><h3>ผลเปรียบเทียบที่ใช้รายงาน</h3><p>ตัวเลข v2–v4 และ SMART จาก Test Q2 cohort เดียวกัน</p></div><ClipboardCheck size={19}/></div>
-    <div className="table-scroller"><table><thead><tr><th>Metric</th><th>SMART Rule</th><th>XGBoost v2</th><th>XGBoost v3</th><th className="v4-col">XGBoost v4</th></tr></thead><tbody>
-      {[['Recall','recall'],['Precision','precision'],['MCC','mcc'],['False Positives','fp']].map(([label,key])=><tr key={key}><th>{label}</th>{[VERSIONS[3],VERSIONS[0],VERSIONS[1],VERSIONS[2]].map((v,i)=><td className={i===3?'v4-col':''} key={v.id}>{key==='fp'?nfmt(v[key]):key==='mcc'?v[key].toFixed(5):pct(v[key],key==='precision'?4:2)}</td>)}</tr>)}
+function Evolution({dataset,error}){
+  if(!dataset)return <div className="page-inner content-page"><PageIntro eyebrow="03 / RESEARCH & EXPERIMENTS" title="ML Evolution" desc="ผลทดลอง v1–v4"/>{error?<ErrorBox message={error}/>:<p>กำลังโหลดผลทดลอง…</p>}</div>;
+  const versions=comparisonVersions(dataset),v4=versions.find(v=>v.id==='v4'),v3=versions.find(v=>v.id==='v3'),baseline=versions.find(v=>v.id==='smart');
+  return <div className="page-inner content-page"><PageIntro eyebrow="03 / RESEARCH & EXPERIMENTS" title="ML Evolution · v1 → v4" desc="เปรียบเทียบผล Test และข้อแลกเปลี่ยนของการตรวจพบกับการแจ้งเตือนผิด โดยแยก v1 ที่ใช้ชุด Test ต่างกัน"/>
+    <div className="evolution-banner"><div><span className="eyebrow">V4 · RETROSPECTIVE TEST</span><h2>เลือก v4 ตามเป้าหมาย Recall และ False Positives เทียบ SMART</h2><p>Recall สูงขึ้น {((v4.recall-baseline.recall)*100).toFixed(2)} จุดเปอร์เซ็นต์ และ False Positives ลดลง {((baseline.fp-v4.fp)/baseline.fp*100).toFixed(2)}% บนชุด Test เดียวกัน</p></div></div>
+    <div className="stats-grid three"><StatCard label="SMART Rule Recall" value={pct(baseline.recall)} detail="Baseline แบบไม่ใช้ ML" icon={ShieldAlert} tone="slate"/><StatCard label="XGBoost v4 Recall" value={pct(v4.recall)} detail={`เทียบ v3 ${pct(v3.recall)}`} icon={TrendingUp}/><StatCard label="False Positives ลดลงจาก SMART" value={nfmt(baseline.fp-v4.fp)} detail="จำนวนแถว HDD-day ในชุด Test" icon={TrendingDown} tone="blue"/></div>
+    <div className="context-note tradeoff-note"><Info size={20}/><p><strong>v4 ตรวจพบมากขึ้น แต่ v3 แจ้งเตือนผิดน้อยกว่า</strong><br/>v4 มี FP {nfmt(v4.fp)} เทียบ v3 {nfmt(v3.fp)} และ Precision {pct(v4.precision,4)} เทียบ {pct(v3.precision,4)} การเลือก v4 จึงเป็นการเลือกตามเป้าหมายโครงการ ไม่ได้ดีที่สุดทุกตัวชี้วัด</p></div>
+    <div className="section-grid"><div className="panel"><div className="panel-header"><div><h3>เปรียบเทียบ v2–v4 กับ SMART</h3><p>ตัวเลขจากผล Test ที่บันทึกไว้ชุดเดียวกัน</p></div><BarChart3 size={20}/></div><MetricVisualization showTitle={false} versions={versions}/></div><div className="panel experiment-panel"><div className="panel-header"><div><h3>กระบวนการปรับปรุงโมเดล</h3><p>เลือกค่าด้วย Validation แล้วรายงานผล Test</p></div><SlidersHorizontal size={20}/></div><div className="timeline">
+      {[['v1','Baseline','เปรียบเทียบ LR, DT, RF และ XGBoost บน Q2 · Test คนละชุด'],['v2','Class Imbalance','ขยายข้อมูลเป็น Q1–Q2 ปรับ Weight และ Threshold'],['v3','Fine-tuning','ปรับโมเดลเพื่อลดการแจ้งเตือนผิดและเพิ่ม MCC'],['v4','Optuna Trial 23','เลือกด้วยเงื่อนไข Recall และ FP เทียบ SMART บน Validation']].map(([v,h,d])=><div className="timeline-row" key={v}><span className={`version-token ${v}`}>{v}</span><div><strong>{h}</strong><p>{d}</p></div></div>)}
+    </div></div></div>
+    <div className="panel table-panel"><div className="panel-header"><div><h3>ผลเปรียบเทียบที่ใช้รายงาน · Test</h3><p>PR-AUC ที่ไม่ได้รายงานจะแสดงว่าไม่มีข้อมูล ไม่แทนด้วยศูนย์</p></div><ClipboardCheck size={19}/></div><div className="table-scroller"><table><thead><tr><th>Metric</th><th>SMART Rule</th><th>XGBoost v2</th><th>XGBoost v3</th><th>XGBoost v4</th></tr></thead><tbody>
+      {[['Recall','recall'],['Precision','precision'],['F1','f1'],['MCC','mcc'],['PR-AUC','pr_auc'],['False Positives','fp'],['Threshold','threshold']].map(([label,key])=><tr key={key}><th>{label}</th>{[versions[3],versions[0],versions[1],versions[2]].map(v=><td key={v.id}>{v[key]==null?'ไม่ได้รายงาน':key==='fp'?nfmt(v[key]):['recall','precision'].includes(key)?pct(v[key],key==='precision'?4:2):v[key].toFixed(5)}</td>)}</tr>)}
     </tbody></table></div></div>
-    {dataset?.versions&&<div className="experiment-source"><FileCheck2 size={17}/><span>ข้อมูลผลทดลองบนเว็บไซต์โหลดจาก <code>public/data/ml_evolution.json</code> ครอบคลุม v1–v4 โดย v1 ใช้ Cohort ต่างจาก v2–v4</span></div>}
-    <DataDisclaimer/>
+    <ResearchDetails dataset={dataset}/>
+    <p className="experiment-source">แหล่งข้อมูล: บันทึกผลทดลองโครงการ v1–v4 · <a href="/data/ml_evolution.json" download>ดาวน์โหลดข้อมูลผลทดลอง</a></p><DataDisclaimer/>
   </div>
 }
 function Guide({go,health}){
@@ -200,18 +216,20 @@ function Guide({go,health}){
 function Sidebar({active,go,theme,setTheme,health,open,setOpen}){
   return <><div className={`sidebar-backdrop ${open?'visible':''}`} onClick={()=>setOpen(false)}/><aside className={`sidebar ${open?'sidebar-open':''}`}><div className="sidebar-brand"><div className="brand-icon"><HardDrive size={24}/></div><div><strong>DriveGuard<span> ML</span></strong><small>INTELLIGENT DISK HEALTH</small></div><button className="icon-btn close-mobile" title="ปิดเมนู" aria-label="ปิดเมนู" onClick={()=>setOpen(false)}><X size={20}/></button></div>
     <div className="sidebar-navigation"><div className="sidebar-label">WORKSPACE</div><nav aria-label="เมนูหลัก">{LINKS.map(link=>{const Icon=link.icon;return <button key={link.id} className={`nav-item ${link.id===active?'current':''}`} aria-current={active===link.id?'page':undefined} onClick={()=>{go(link.id);setOpen(false)}}><Icon size={20}/><span><strong>{link.title}</strong><small>{link.subtitle}</small></span>{active===link.id&&<span className="active-indicator"/>}</button>})}</nav></div>
-    <div className="sidebar-bottom"><div className="server-state"><div className="server-top"><span className="server-led" style={{background:health?.model_ready?'#33c7ae':undefined}}/><span>ENGINE STATUS</span></div><strong>{health?.model_ready?'XGBoost v4 Ready':health?.status==='unavailable'?'Model unavailable':'API Not Verified'}</strong><small>7-day failure classification</small></div>
+    <div className="sidebar-bottom"><div className="server-state"><div className="server-top"><span className="server-led" style={{background:health?.model_ready?'#33c7ae':undefined}}/><span>ENGINE STATUS</span></div><strong>{health?.model_ready?`${health.model} · โมเดลหลักพร้อมใช้`:health?.status==='unavailable'?'Model unavailable':'API Not Verified'}</strong><small>7-day failure classification</small></div>
       <button className="theme-toggle" onClick={()=>setTheme(theme==='light'?'dark':'light')} aria-label="สลับธีมมืดสว่าง">{theme==='light'?<Moon size={18}/>:<Sun size={18}/>}<span>{theme==='light'?'Dark Mode':'Light Mode'}</span><span className="kbd">{theme==='light'?'◐':'☀'}</span></button>
       <div className="sidebar-foot"><span>v1.6 · React Edition</span><span>Research Prototype</span></div></div>
   </aside></>;
 }
 export default function App(){
   const [page,go]=useHashPage();const [theme,setTheme]=useTheme();const [menu,setMenu]=useState(false);const [health,setHealth]=useState(null);
+  const [dataset,setDataset]=useState(null),[researchError,setResearchError]=useState('');
+  useEffect(()=>{const controller=new AbortController();fetch('/data/ml_evolution.json',{signal:controller.signal}).then(r=>{if(!r.ok)throw new Error();return r.json()}).then(d=>{if(!['v2','v3','v4'].every(id=>d.versions?.some(v=>v.id===id&&v.metrics)))throw new Error();setDataset(d)}).catch(e=>{if(e.name!=='AbortError')setResearchError('โหลดผลทดลองไม่สำเร็จ กรุณารีเฟรชหน้าเว็บ')});return()=>controller.abort()},[]);
   useEffect(()=>{let active=true;fetch('/api/health',{cache:'no-store'}).then(r=>r.json()).then(data=>{if(active)setHealth(data)}).catch(()=>{if(active)setHealth({status:'offline',model_ready:false})});return()=>{active=false}},[]);
   const current=LINKS.find(x=>x.id===page)??LINKS[0];
   return <div className="app-shell"><Sidebar active={page} go={go} theme={theme} setTheme={setTheme} health={health} open={menu} setOpen={setMenu}/>
     <div className="app-main"><header className="topbar"><button className="icon-btn mobile-menu" onClick={()=>setMenu(true)} aria-label="เปิดเมนู"><Menu size={24}/></button><div className="breadcrumbs"><span>DriveGuard ML</span><ChevronRight size={15}/><strong>{current.title}</strong></div><div className="top-actions"><span className="top-version">REACT · V1.6</span><span className={`api-indicator ${health?.model_ready?'on':'off'}`}><span/>{health?.model_ready?'API Connected':'API Checking'}</span><button className="icon-btn top-theme" onClick={()=>setTheme(theme==='light'?'dark':'light')} aria-label="เปลี่ยนธีม">{theme==='light'?<Moon size={19}/>:<Sun size={19}/>}</button></div></header>
-      <main id="main-content">{page==='overview'?<Overview go={go} health={health}/>:page==='inspect'?<Inspect health={health}/>:page==='predict'?<Predict health={health}/>:page==='evolution'?<Evolution/>:<Guide go={go} health={health}/>}</main>
+      <main id="main-content">{page==='overview'?<><ErrorBox message={researchError}/><Overview go={go} health={health} dataset={dataset}/></>:page==='inspect'?<Inspect health={health}/>:page==='predict'?<Predict health={health}/>:page==='evolution'?<Evolution dataset={dataset} error={researchError}/>:<Guide go={go} health={health}/>}</main>
       <footer className="site-footer"><span>© 2026 DriveGuard ML · React Edition</span><span>Academic Research Prototype · Not a production failure guarantee</span></footer>
     </div>
   </div>;
